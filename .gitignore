@@ -1,0 +1,5 @@
+#compiled python file
+*.pyc
+
+# frontend dependencies
+/node_modules
