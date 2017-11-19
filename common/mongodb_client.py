@@ -3,7 +3,7 @@ from pymongo import MongoClient
 
 MONGO_DB_HOST = "localhost"
 MONGO_DB_PORT = 27017
-DB_NAME = "zillow-house"
+DB_NAME = "zillow-houses"
 
 CLIENT = MongoClient("%s:%s" % (MONGO_DB_HOST, str(MONGO_DB_PORT)))
 
