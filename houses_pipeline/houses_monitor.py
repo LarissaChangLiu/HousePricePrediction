@@ -2,7 +2,10 @@ from lxml import html
 import hashlib
 import requests
 import redis
+import sys
+import os
 from re import sub
+import random
 from decimal import Decimal
 from exceptions import ValueError
 
@@ -27,15 +30,15 @@ USER_AGENTS = []
 ZIPCODES = []
 
 with open(USER_AGENTS_FILE, 'rb') as uaf:
-    for ua in uaf.readline():
+    for ua in uaf:
         if ua:
             USER_AGENTS.append(ua.strip()[1:-1])
 random.shuffle(USER_AGENTS)
 
 with open(ZIPCODES_FILE, 'rb') as uaf:
-    for zipcode in uaf.readline():
+    for zipcode in uaf:
         if zipcode:
-            USER_AGENTS.append(zipcode)
+            ZIPCODES.append(zipcode.strip()[1:-1])
 random.shuffle(ZIPCODES)
 
 def getHeaders():
@@ -53,54 +56,58 @@ def getHeaders():
 
 while True:
     num_of_new_news = 0
-	for zipecode in ZIPCODES:
+
+    for zipecode in ZIPCODES:
         url = "https://www.zillow.com/{0}/sold/".format(zipecode)
+        print url
         try:
-			headers= getHeaders()
-			response = requests.get(url,headers=headers)
-			parser = html.fromstring(response.text)
-			search_results = parser.xpath("//div[@id='search-results']//article")
-			properties_list = []
-			for properties in search_results:
-				raw_address = properties.xpath(".//span[@itemprop='address']//span[@itemprop='streetAddress']//text()")
-                address = ' '.join(' '.join(raw_address).split()) if raw_address else None
-                house_digest = hashlib.md5(address.encode('utf-8')).digest().encode('base64')
-                if redis_client.get(house_digest)
-                    raw_city = properties.xpath(".//span[@itemprop='address']//span[@itemprop='addressLocality']//text()")
-                    city = ''.join(raw_city).strip() if raw_city else None
-                    
-                    raw_state= properties.xpath(".//span[@itemprop='address']//span[@itemprop='addressRegion']//text()")
-                    state = ''.join(raw_state).strip() if raw_state else None
-
-                    raw_postal_code= properties.xpath(".//span[@itemprop='address']//span[@itemprop='postalCode']//text()")
-                    postal_code = ''.join(raw_postal_code).strip() if raw_postal_code else None
-
-                    raw_price = properties.xpath(".//span[@class='zsg-photo-card-status']//text()")
-                    price = ''.join(raw_price).strip() if raw_price else None
-
-                    #.//div[@id='hdp-price-history']//text()
-                    url = properties.xpath(".//a[contains(@class,'overlay-link')]/@href")
-                    property_url = "https://www.zillow.com"+url[0] + "?fullpage=true" if url else None 
-                    # is_forsale = properties.xpath('.//span[@class="zsg-icon-for-sale"]')
-                    
-                    properties = {
-                                    'digest': house_digest,
-                                    'address':address,
-                                    'city':city,
-                                    'state':state,
-                                    'postal_code':postal_code,
-                                    'price':Decimal(sub[r'[^\d.]','',price),
-                                    'facts and features':info,
-                                    'real estate provider':broker,
-                                    'url':property_url,
-                                    'title':title
-                    }
-                    cloudAMQP_client.send_message(properties)
-                    num_of_new_news = num_of_new_news + 1
-                    redis_client.set(house_digest, properties)
-                    redis_client.expire(house_digest, NEWS_TIME_OUT_IN_SECONDS)
-                    print 'house url %s' % url
-		except:
-			print "Failed to process the page",url
+		headers= getHeaders()
+		response = requests.get(url,headers=headers)
+		parser = html.fromstring(response.text)
+		search_results = parser.xpath("//div[@id='search-results']//article")
+		properties_list = []
+		for properties in search_results:
+			raw_address = properties.xpath(".//span[@itemprop='address']//span[@itemprop='streetAddress']//text()")
+			address = ' '.join(' '.join(raw_address).split()) if raw_address else None
+			print address
+			house_digest = hashlib.md5(address.encode('utf-8')).digest().encode('base64')
+			if redis_client.get(house_digest) is None:
+				raw_city = properties.xpath(".//span[@itemprop='address']//span[@itemprop='addressLocality']//text()")
+				city = ''.join(raw_city).strip() if raw_city else None
+		                print city
+				raw_state= properties.xpath(".//span[@itemprop='address']//span[@itemprop='addressRegion']//text()")
+				state = ''.join(raw_state).strip() if raw_state else None
+		                print state
+				raw_postal_code= properties.xpath(".//span[@itemprop='address']//span[@itemprop='postalCode']//text()")
+				postal_code = ''.join(raw_postal_code).strip() if raw_postal_code else None
+		                print postal_code
+				raw_price = properties.xpath(".//span[@class='zsg-photo-card-status']//text()")
+				price = ''.join(raw_price).strip() if raw_price else None
+		                print '$' in price
+			        true_price = price[price.index('$') + 1:] if '$' in price else '0.0'
+				print Decimal(true_price)
+				#.//div[@id='hdp-price-history']//text()
+				url = properties.xpath(".//a[contains(@class,'overlay-link')]/@href")
+				property_url = "https://www.zillow.com"+url[0] + "?fullpage=true" if url else None 
+				# is_forsale = properties.xpath('.//span[@class="zsg-icon-for-sale"]')
+		                print property_url
+				properties = {
+					'digest': house_digest,
+					'address':address,
+					'city':city,
+					'state':state,
+					'postal_code':postal_code,
+					'price':Decimal(true_price),
+					'url':property_url,
+					'title':title
+				}
+	                        print 'before send to queue'
+				cloudAMQP_client.send_message(properties)
+				num_of_new_news = num_of_new_news + 1
+				redis_client.set(house_digest, properties)
+				redis_client.expire(house_digest, NEWS_TIME_OUT_IN_SECONDS)
+	         		print 'house url %s' % url
+	except:
+		print "Failed to process the page", sys.exc_info()[0]
     print "Fetched %d houses." % num_of_new_news
     cloudAMQP_client.sleep(SLEEP_TIME_IN_SECONDS)

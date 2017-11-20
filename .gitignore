@@ -3,3 +3,5 @@
 
 # frontend dependencies
 /node_modules
+
+*.swp
