@@ -1,12 +1,16 @@
 import requests
 from lxml import html
-import mongodb_client
+import sys
+import os
+from re import sub
+import random
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'common'))
-SCRAPE_NEWS_TASK_QUEUE_URL = "amqp://gedloxkh:japAT0jHP6GpNU49sT4WZuM7PATCEiSp@elephant.rmq.cloudamqp.com/gedloxkh"
-SCRAPE_NEWS_TASK_QUEUE_NAME = "houses-monitor-task-queue"
+SCRAPE_HOUSES_TASK_QUEUE_URL = "amqp://gedloxkh:japAT0jHP6GpNU49sT4WZuM7PATCEiSp@elephant.rmq.cloudamqp.com/gedloxkh"
+SCRAPE_HOUSE_TASK_QUEUE_NAME = "houses-monitor-task-queue"
 from cloud_amqp_client import CloudAMQPClient
-cloudAMQP_client = CloudAMQPClient(SCRAPE_NEWS_TASK_QUEUE_URL, SCRAPE_NEWS_TASK_QUEUE_NAME)
+import mongodb_client
+cloudAMQP_client = CloudAMQPClient(SCRAPE_HOUSES_TASK_QUEUE_URL, SCRAPE_HOUSE_TASK_QUEUE_NAME)
 
 SLEEP_TIME_IN_SECONDS = 5
 NEWS_TABLE_NAME = "houses"
@@ -37,24 +41,33 @@ def handle_message(msg):
         print 'message is broken'
         return
 
-    if msg['url'] is None
+    if msg['url'] is None:
         print 'house data is missing url'
         return
     
     try:
+        print msg
         headers= getHeaders()
         response = requests.get(msg['url'],headers=headers)
         parser = html.fromstring(response.text)
-        sale_price = parser.xpath("//div[@id='tax-price-history']//tr[td='Sold']/td[3]")
-        pending_sale = parser.xpath("//div[@id='tax-price-history']//tr[td='Sale pending']/td[3]")
-        msg['price'] = Decimal(sub(r'[^\d.]', '', sale_price)) if sale_price else Decimal(sub(r'[^\d.]', '', pending_sale)) if pending_sale else None
+        pending_sale = parser.xpath("//div[@id='tax-price-history']//tr[td='Pending sale']/td[3]")
+        print 'pending_sale', pending_sale
+        if msg['price'] != 0:
+            msg['price'] = msg['price']
+        elif len(pending_sale) > 0:
+            msg['price'] = int(sub(r'[^\d.]','',pending_sale[0][pending_sale[0].index('$') + 1:])) if '$' in sale_price[0] else '0'
+            print 'from pending_sale', msg['price']
+        else: 
+            msg['price'] = 0
+
+        # msg['price'] = Decimal(sub(r'[^\d.]', '', sale_price)) if sale_price else Decimal(sub(r'[^\d.]', '', pending_sale)) if pending_sale else None
         print "house price %d", msg['price']
         # search_results = parser.xpath("//div[@id='search-results']//article")
         # //div[@id='tax-price-history']//tr[td='Sold']/td[3]
 
     except:
         print 'sth wrong in house scraping', msg['url']
-    print ('newspaper scrape the artical and prepate sent to dedupeq queue')
+    print 'save to db', msg
     db = mongodb_client.get_db()
     db[NEWS_TABLE_NAME].replace_one({'digest': msg['digest']}, msg, upsert=True)
 
