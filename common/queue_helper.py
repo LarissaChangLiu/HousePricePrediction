@@ -10,7 +10,7 @@ from cloud_amqp_client import CloudAMQPClient
 SCRAPE_HOUSES_TASK_QUEUE_URL = "amqp://gedloxkh:japAT0jHP6GpNU49sT4WZuM7PATCEiSp@elephant.rmq.cloudamqp.com/gedloxkh"
 SCRAPE_HOUSE_TASK_QUEUE_NAME = "houses-monitor-task-queue"
 
-def clearQueue(queue_url, queue_name):
+def clear_queue(queue_url, queue_name):
     scrape_news_queue_client = CloudAMQPClient(queue_url, queue_name)
 
     num_of_messages = 0
@@ -23,6 +23,5 @@ def clearQueue(queue_url, queue_name):
                 return
             num_of_messages += 1
 
-
 if __name__ == "__main__":
-    clearQueue(SCRAPE_HOUSES_TASK_QUEUE_URL, SCRAPE_HOUSE_TASK_QUEUE_NAME)
+    clear_queue(SCRAPE_HOUSES_TASK_QUEUE_URL, SCRAPE_HOUSE_TASK_QUEUE_NAME)
