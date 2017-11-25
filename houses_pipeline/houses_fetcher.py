@@ -10,6 +10,7 @@ import random
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'common'))
 SCRAPE_HOUSES_TASK_QUEUE_URL = "amqp://gedloxkh:japAT0jHP6GpNU49sT4WZuM7PATCEiSp@elephant.rmq.cloudamqp.com/gedloxkh"
 SCRAPE_HOUSE_TASK_QUEUE_NAME = "houses-monitor-task-queue"
+
 from cloud_amqp_client import CloudAMQPClient
 import mongodb_client
 cloudAMQP_client = CloudAMQPClient(SCRAPE_HOUSES_TASK_QUEUE_URL, SCRAPE_HOUSE_TASK_QUEUE_NAME)
@@ -41,16 +42,12 @@ def parse_floor(msg, flooring):
     floor = 0
     if 'Hardwood' in flooring:
         floor = 4
-        print 'Hardwood'
     elif 'Laminate' in flooring:
         floor = 3
-        print 'Laminate'
     elif 'Carpet' in flooring:
         floor = 2
-        print 'Carpet'
     elif 'Tile' in flooring:
         floor = 1
-        print 'Tile'
     msg['flooring'] = floor
 
 
@@ -83,47 +80,56 @@ def handle_message(msg, tb_name):
             for row in data:
                 if row[1] == 'Pending sale':
                     msg['price'] = int(sub(r'[^\d.]','',row[2]))
+                    break;
         
         parser = html.fromstring(response.text)
         # find flooring
         raw_flooring = parser.xpath("//span[@class='hdp-fact-name' and text()='Flooring: ']/following-sibling::span[1]//text()")
         flooring = ''.join(raw_flooring).strip() if raw_flooring else None
         parse_floor(msg, flooring)
-
-        # pending_sale = parser.xpath(".//div[@id='tax-price-history']//tr[td='Pending sale']/td[3]//text()")
-        
-        
-        
-
-        # fencing = parser.xpath("//span[@class='hdp-fact-name' and text()='Fencing: ']/following-sibling::span[1]")
-        # print 'fencing ==> ', fencing
-        # msg['fencing'] = 1 if fencing else 0
-        
-        # gutters = parser.xpath("//span[@class='hdp-fact-name' and text()='Exterior Features: ']/following-sibling::span[1]")
-        # print 'gutters', gutters
-        # msg['gutters'] = 1 if gutters else 0
-
-
-        # beds = parser.xpath("//span[@class='addr_bbs' and contains(text(),'beds')]")
-        # msg['beds'] = beds.split(' ')[0] if beds else 0
-        
-        # baths = parser.xpath("//span[@class='addr_bbs' and contains(text(),'baths')]")
-        # msg['baths'] = baths.split(' ')[0] if baths else 0
-
-        # sqft = parser.xpath("//span[@class='addr_bbs' and contains(text(),'sqft')]")
-        # msg['sqft'] = sqft.split(' ')[0] if sqft else 0
-        
-        # built_yr = parser.xpath("//span[@class='hdp-fact-value' and contains(text(),'Built in ')]")
-        # msg['built_yr'] = built_yr.split(' ')[2] if built_yr else 0
-        
-        # lots_size = parser.xpath("//span[@class='hdp-fact-name' and text()='Lot: ']/following-sibling::span[1]")
-        # msg['lots_size'] = int(sub(r'[^\d.]','',lots_size)) if lots_size else 0
-
-        # print "fetch house", msg
+        # find gutters
+        raw_gutters = parser.xpath("//span[@class='hdp-fact-name' and text()='Exterior Features: ']/following-sibling::span[1]//text()")
+        gutters = 1 if raw_gutters else 0
+        msg['gutters'] = gutters
+        # find fencing
+        raw_fencing = parser.xpath("//span[@class='hdp-fact-name' and text()='Fencing: ']/following-sibling::span[1]//text()")
+        msg['fencing'] = 1 if raw_fencing else 0
+        # find beds
+        raw_beds = parser.xpath("//span[@class='addr_bbs' and contains(text(),'beds')]//text()")
+        msg['beds'] = int(raw_beds[0].split(' ')[0]) if raw_beds else 0
+        # find baths
+        raw_baths = parser.xpath("//span[@class='addr_bbs' and contains(text(),'baths')]//text()")
+        msg['baths'] = int(raw_baths[0].split(' ')[0]) if raw_baths else 0
+        # find sqft
+        raw_sqft = parser.xpath("//span[@class='addr_bbs' and contains(text(),'sqft')]//text()")
+        msg['sqft'] = int(sub(r'[^\d.]','',raw_sqft[0].split(' ')[0])) if raw_sqft else 0
+        # find built yr
+        raw_year1 = parser.xpath(".//p[contains(text(),'Year Built')]//following-sibling::div[1]//text()")
+        raw_year2 = parser.xpath(".//span[@class='hdp-fact-value' and contains(text(),'Built in ')]//text()")
+        if raw_year1:
+            year1 = ''.join(raw_year1).strip()
+            msg['built_yr'] = int(year1)
+        elif raw_year2:
+            year2 = ''.join(raw_year2).strip()
+            msg['built_yr'] = int(year2)
+        else:
+            msg['built_yr'] = 0
+        # find lots
+        lots_raw1 = parser.xpath(".//p[contains(text(),'Lot')]//following-sibling::div[1]//text()")
+        lots_raw2 = parser.xpath(".//span[@class='hdp-fact-name' and text()='Lot: ']/following-sibling::span[1]//text()")
+        if lots_raw1:
+            lots1 = ''.join(lots_raw1).strip()
+            msg['lots'] = int(sub(r'[^\d.]','',lots1.split(' ')[0]))
+        elif lots_raw2:
+            lots2 = ''.join(lots_raw2).strip()
+            msg['lots'] = int(sub(r'[^\d.]','',lots2.split(' ')[0]))
+        else:
+            msg['lots'] = 0
     except Exception as e:
         print 'sth wrong in house scraping', e
     db = mongodb_client.get_db()
     db[tb_name].replace_one({'digest': msg['digest']}, msg, upsert=True)
+    print "[x] save house {} to db table {}".format(msg, tb_name)
 
 def scrape(tb_name=HOUSES_TABLE_NAME):
     while True:
