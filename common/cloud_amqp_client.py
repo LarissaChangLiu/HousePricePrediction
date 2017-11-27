@@ -13,7 +13,7 @@ class CloudAMQPClient(object):
         self.connection = pika.BlockingConnection(
             self.params)  # Connect to CloudAMQP
         self.channel = self.connection.channel()  # start a channel
-        self.channel.queue_declare(queue=queue_name)  # Declare a queue
+        self.queue = self.channel.queue_declare(queue=queue_name)  # Declare a queue
 
     def send_message(self, message):
         """sent_message"""
@@ -38,3 +38,6 @@ class CloudAMQPClient(object):
     def sleep(self, seconds):
         """sleep"""
         self.connection.sleep(seconds)
+    
+    def count(self):
+        return self.queue.method.message_count

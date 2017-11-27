@@ -19,7 +19,7 @@ REDIS_HOST = "localhost"
 REDIS_PORT = 6379
 redis_client = redis.StrictRedis(REDIS_HOST, REDIS_PORT)
 
-SLEEP_TIME_IN_SECONDS = 10
+SLEEP_TIME_IN_SECONDS = 3
 NEWS_TIME_OUT_IN_SECONDS = 3600 * 24
 
 
@@ -60,12 +60,11 @@ while True:
 			try:
 				headers= getHeaders()
 				url = "https://www.zillow.com/{}/sold/".format(zipecode) if i == 1 else "https://www.zillow.com/{}/sold/{}_p/".format(zipecode, i) 
-				print url
+				print 'start download house list from', url
 				response = requests.get(url,headers=headers)
 				parser = html.fromstring(response.text)
 				search_results = parser.xpath("//div[@id='search-results']//article")
 				properties_list = []
-				print search_results
 				for properties in search_results:
 					raw_address = properties.xpath(".//span[@itemprop='address']//span[@itemprop='streetAddress']//text()")
 					address = ' '.join(' '.join(raw_address).split()) if raw_address else None
@@ -79,7 +78,7 @@ while True:
 						postal_code = ''.join(raw_postal_code).strip() if raw_postal_code else None
 						raw_price = properties.xpath(".//span[@class='zsg-photo-card-status']//text()")
 						price = ''.join(raw_price).strip() if raw_price else None
-						true_price = int(sub(r'[^\d.]','',price[price.index('$') + 1:])) if '$' in price else '0'
+						true_price = int(sub(r'[^\d.]','',price[price.index('$') + 1:])) if '$' in price else 0
 						#.//div[@id='hdp-price-history']//text()
 						url = properties.xpath(".//a[contains(@class,'overlay-link')]/@href")
 						property_url = "https://www.zillow.com"+url[0] + "?fullpage=true" if url else None 
@@ -97,7 +96,8 @@ while True:
 						num_of_new_news = num_of_new_news + 1
 						redis_client.set(house_digest, properties)
 						redis_client.expire(house_digest, NEWS_TIME_OUT_IN_SECONDS)
+						cloudAMQP_client.sleep(SLEEP_TIME_IN_SECONDS)
 			except:
 				print "Failed to process the page", sys.exc_info()[0]
 		print "Fetched %d houses." % num_of_new_news
-		cloudAMQP_client.sleep(SLEEP_TIME_IN_SECONDS)
+		

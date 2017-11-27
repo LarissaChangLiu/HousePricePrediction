@@ -11,6 +11,7 @@ def test_basic():
 
     sent_msg = {'test': 'test'}
     client.send_message(sent_msg)
+    assert 1 == client.count()
     received_msg = client.get_message()
     assert sent_msg == received_msg
     print 'test_basic passed.'
