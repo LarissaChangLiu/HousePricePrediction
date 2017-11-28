@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""A dataset loader for imports85.data."""
-
+"""A dataset loader for importsData.data."""
+# https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/get_started/regression/imports85.py
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -61,7 +61,7 @@ def dataset(y_name="price", train_fraction=0.7):
     A (train,test) pair of `Datasets`
   """
   # Download and cache the data
-  path = './data/houses.csv'
+  path = '../data/houses.csv'
 
   # Define how the lines of the file should be parsed
   def decode_line(line):
@@ -78,17 +78,6 @@ def dataset(y_name="price", train_fraction=0.7):
     label = features_dict.pop(y_name)
 
     return features_dict, label
-
-  def has_no_question_marks(line):
-    """Returns True if the line of text has no question marks."""
-    # split the line into an array of characters
-    chars = tf.string_split(line[tf.newaxis], "").values
-    # for each character check if it is a question mark
-    is_question = tf.equal(chars, "?")
-    any_question = tf.reduce_any(is_question)
-    no_question = ~any_question
-
-    return no_question
 
   def in_training_set(line):
     """Returns a boolean tensor, true if the line is in the training set."""

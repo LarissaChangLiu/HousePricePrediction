@@ -5,3 +5,6 @@
 /node_modules
 
 *.swp
+
+# tf model folder
+/house_price_model_service/model

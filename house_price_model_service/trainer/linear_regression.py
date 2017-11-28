@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 """Linear regression using the LinearRegressor Estimator."""
-
+# https://github.com/tensorflow/tensorflow/blob/r1.4/tensorflow/examples/get_started/regression/linear_regression.py
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -24,17 +24,17 @@ import tensorflow as tf
 import importData # pylint: disable=g-bad-import-order
 
 STEPS = 1000
-PRICE_NORM_FACTOR = 1000
+MODEL_DIR = '../model'
+PRICE_NORM_FACTOR = 100000
 
+# Switch the labels to units of thousands for better convergence.
+def to_thousands(features, labels):
+  return features, labels/PRICE_NORM_FACTOR
 
-def main(argv):
+def build_model(argv):
   """Builds, trains, and evaluates the model."""
   assert len(argv) == 1
   (train, test) = importData.dataset()
-
-  # Switch the labels to units of thousands for better convergence.
-  def to_thousands(features, labels):
-    return features, labels/PRICE_NORM_FACTOR
 
   train = train.map(to_thousands)
   test = test.map(to_thousands)
@@ -44,7 +44,7 @@ def main(argv):
     return (
         # Shuffling with a buffer larger than the data set ensures
         # that the examples are well mixed.
-        train.shuffle(1000).batch(128)
+        train.shuffle(4000).batch(128)
         # Repeat forever
         .repeat().make_one_shot_iterator().get_next())
 
@@ -65,7 +65,7 @@ def main(argv):
   ]
 
   # Build the Estimator.
-  model = tf.estimator.LinearRegressor(feature_columns=feature_columns)
+  model = tf.estimator.LinearRegressor(feature_columns=feature_columns, model_dir=MODEL_DIR)
 
   # Train the model.
   # By default, the Estimators log output every 100 steps.
@@ -82,40 +82,40 @@ def main(argv):
   print("\n" + 80 * "*")
   print("\nRMS error for the test set: ${:.0f}"
         .format(PRICE_NORM_FACTOR * average_loss**0.5))
-
+  return model  
   # Run the model in prediction mode.
-  input_dict = {
-      "flooring": np.array([4]),
-      "fencing": np.array([0]),
-      "baths": np.array([2]),
-      "beds": np.array([3]),
-      "zip_code": np.array([75035]),
-      "built_yr": np.array([1998]),
-      "gutters": np.array([0]),
-      "sqft": np.array([2000])
-  }
-  predict_input_fn = tf.estimator.inputs.numpy_input_fn(
-      input_dict, shuffle=False)
-  predict_results = model.predict(input_fn=predict_input_fn)
+  # input_dict = {
+  #     "flooring": np.array([1]),
+  #     "fencing": np.array([0]),
+  #     "baths": np.array([2]),
+  #     "beds": np.array([3]),
+  #     "zip_code": np.array([75035]),
+  #     "built_yr": np.array([1998]),
+  #     "gutters": np.array([0]),
+  #     "sqft": np.array([2000])
+  # }
+  # predict_input_fn = tf.estimator.inputs.numpy_input_fn(
+  #     input_dict, shuffle=False)
+  # predict_results = model.predict(input_fn=predict_input_fn)
 
-  # Print the prediction results.
-  print("\nPrediction results:")
-  for i, prediction in enumerate(predict_results):
-    msg = ("flooring: {: 4d}, "
-           "fencing: {: 4d}, "
-           "baths: {: 4d}, "
-           "beds: {: 4d}, "
-           "zip_code: {: 4d}, "
-           "built_yr: {: 4d}, "
-           "Prediction: ${: 9.2f}")
-    msg = msg.format(input_dict["flooring"][i], input_dict["fencing"][i],input_dict["baths"][i],input_dict["beds"][i],input_dict["zip_code"][i],input_dict["built_yr"][i],
-                     PRICE_NORM_FACTOR * prediction["predictions"][0])
+  # # Print the prediction results.
+  # print("\nPrediction results:")
+  # for i, prediction in enumerate(predict_results):
+  #   msg = ("flooring: {: 4d}, "
+  #          "fencing: {: 4d}, "
+  #          "baths: {: 4d}, "
+  #          "beds: {: 4d}, "
+  #          "zip_code: {: 4d}, "
+  #          "built_yr: {: 4d}, "
+  #          "Prediction: ${: 9.2f}")
+  #   msg = msg.format(input_dict["flooring"][i], input_dict["fencing"][i],input_dict["baths"][i],input_dict["beds"][i],input_dict["zip_code"][i],input_dict["built_yr"][i],
+  #                    PRICE_NORM_FACTOR * prediction["predictions"][0])
 
-    print("    " + msg)
-  print()
+  #   print("    " + msg)
+  # print()
 
 
 if __name__ == "__main__":
   # The Estimator periodically generates "INFO" logs; make these logs visible.
   tf.logging.set_verbosity(tf.logging.INFO)
-  tf.app.run(main=main)
+  tf.app.run(main=build_model)
