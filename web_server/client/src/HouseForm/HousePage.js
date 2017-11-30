@@ -13,11 +13,11 @@ class HousePage extends React.Component {
         state:'',
         zipcode:0,
         flooring: 0,
-		fencing: 0,
+		fencing: false,
 		baths: 0,
 		beds: 0,
 		builtYr:0,
-		gutters: 0,
+		gutters: false,
 		sqft:0
       }
     };
