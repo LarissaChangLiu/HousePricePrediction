@@ -1,10 +1,13 @@
 #compiled python file
 *.pyc
 
-# frontend dependencies
-/node_modules
+# client dependencies
+/web_server/client/node_modules
 
 *.swp
 
 # tf model folder
 /house_price_model_service/model
+
+# web app dependencies
+/web_server/server/node_modules
