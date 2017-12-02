@@ -29,7 +29,7 @@ except ImportError:
   pass
 
 
-TOTAL_RECORDS = 795
+TOTAL_RECORDS = 2610
 
 # Order is important for the csv-readers, so we use an OrderedDict here.
 defaults = collections.OrderedDict([
@@ -125,10 +125,6 @@ def raw_dataframe():
 
 def load_data(y_name="price", train_fraction=0.7, seed=None):
   """Get the imports85 data set.
-  A description of the data is available at:
-    https://archive.ics.uci.edu/ml/datasets/automobile
-  The data itself can be found at:
-    https://archive.ics.uci.edu/ml/machine-learning-databases/autos/imports-85.data
   Args:
     y_name: the column to return as the label.
     train_fraction: the fraction of the dataset to use for training.
@@ -137,7 +133,7 @@ def load_data(y_name="price", train_fraction=0.7, seed=None):
   Returns:
     a pair of pairs where the first pair is the training data, and the second
     is the test data:
-    `(x_train, y_train), (x_test, y_test) = get_imports85_dataset(...)`
+    `(x_train, y_train), (x_test, y_test) = load_data(...)`
     `x` contains a pandas DataFrame of features, while `y` contains the label
     array.
   """

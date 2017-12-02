@@ -15,7 +15,7 @@ router.post('/getPrediction', function(req, res, next) {
       'sqft': req.body.sqft
   }
   rpc_client.getPrediction(house, function(response) {
-    res.json(response)
+    res.json({'price': response})
   });
 });
 

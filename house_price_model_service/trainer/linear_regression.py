@@ -25,7 +25,7 @@ import importData # pylint: disable=g-bad-import-order
 
 STEPS = 1000
 MODEL_DIR = '../model'
-PRICE_NORM_FACTOR = 100000
+PRICE_NORM_FACTOR = 1000
 
 # Switch the labels to units of thousands for better convergence.
 def to_thousands(features, labels):
@@ -73,7 +73,6 @@ def build_model(argv):
 
   # Evaluate how the model performs on data it has not yet seen.
   eval_result = model.evaluate(input_fn=input_test)
-
   # The evaluation returns a Python dictionary. The "average_loss" key holds the
   # Mean Squared Error (MSE).
   average_loss = eval_result["average_loss"]

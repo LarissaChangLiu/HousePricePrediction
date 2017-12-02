@@ -1,5 +1,6 @@
+import $ from 'jquery';
 import 'materialize-css/dist/css/materialize.min.css';
-import 'materialize-css/dist/js/materialize.js';
+import Materialize from 'materialize-css/dist/js/materialize.js' ;
 import React from 'react';
 import './HouseForm.css';
 class HouseForm extends React.Component {
@@ -22,8 +23,23 @@ class HouseForm extends React.Component {
         this.handleSubmit = this.handleSubmit.bind(this);
     }
 
+    reset(){
+        this.state = {
+            address:'',
+            city:'',
+            stateName:'',
+            zipcode:0,
+            flooring: 0,
+            fencing: false,
+            baths: 0,
+            beds: 0,
+            builtYr:0,
+            gutters: false,
+            sqft:0
+        }
+    }
 
-    handleChange(event){
+    handleChange(event){false
         const field = event.target.name;
         const tempState = this.state
         if ((field==='fencing' || field==='gutters') && event.target.value === 'on'){
@@ -41,13 +57,12 @@ class HouseForm extends React.Component {
         } else {
             tempState[field] = event.target.value;
         }
-        console.log(tempState)
         this.setState({tempState});
     }
 
     handleSubmit(event) {
         event.preventDefault();
-        fetch('http://' + window.location.hostname + ':6060/prediction/', {
+        fetch('http://' + window.location.hostname + ':3000/house/getPrediction/', {
             method: 'POST',
             cache: false,
             headers: {
@@ -56,19 +71,23 @@ class HouseForm extends React.Component {
             },
             body: JSON.stringify({
                 flooring:this.state.flooring,
-                fencing:this.state.fencing,
-                baths:this.state.baths,
-                beds:this.state.beds,
-                zip_code:this.state.zipcode,
-                built_yr:this.state.built_yr,
-                gutters:this.state.gutters,
-                sqft:this.state.sqft
+                fencing:this.state.fencing ? 1 : 0,
+                baths:parseInt(this.state.baths),
+                beds:parseInt(this.state.beds),
+                zip_code:parseInt(this.state.zipcode),
+                built_yr:parseInt(this.state.builtYr),
+                gutters:this.state.gutters ? 1 : 0,
+                sqft:parseInt(this.state.sqft)
             })
           }).then(response => {
+            console.log(response)
             if (response.status === 200) {
-              console.log(response.body)
+                response.json().then(priceObj => {
+                    var price = '$' + priceObj['price'].toFixed(0).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
+                    $('#priceTag').text(price);
+                })
             } else {
-              console.log('submit failed.');
+              console.log('predict failed.');
             }
           });
     }
@@ -142,6 +161,7 @@ class HouseForm extends React.Component {
                     </p>
                 </div>
                 <div className="row right-align">
+                    <h4 id="priceTag" className="left-align"></h4>
                     <input type="submit" className="waves-effect waves-light btn indigo lighten-1" value='Submit'/>
                 </div>
               </form>
