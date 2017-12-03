@@ -23,7 +23,7 @@ SERVER_PORT = 6060
 MODEL_DIR = '../model'
 MODEL_UPDATE_LAG_IN_SECONDS = 10
 
-PRICE_NORM_FACTOR = 100000
+PRICE_NORM_FACTOR = 1000
 
 model = None
 
@@ -63,6 +63,7 @@ class RequestHandler(pyjsonrpc.HttpRequestHandler):
             input_dict, shuffle=False)
         predict_results = model.predict(input_fn=predict_input_fn)
         for i, prediction in enumerate(predict_results):
+            print 'LArissa LArissa', prediction["predictions"][0]
             return PRICE_NORM_FACTOR * prediction["predictions"][0]
         
 # Setup watchdog
